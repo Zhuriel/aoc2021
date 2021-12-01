@@ -4,14 +4,17 @@ main :: IO ()
 main = do
     input <- readFile "input.txt"
     print . numIncreases . map read $ lines input
-    print . numIncreases . movingSum3 . map read $ lines input
+    print . numIncreases . movingSum 3 . map read $ lines input
 
+numIncreases :: [Int] -> Int
 numIncreases = length . filter (> 0) . diffAdjacent
 
 diffAdjacent :: [Int] -> [Int]
-diffAdjacent (_:[]) = []
-diffAdjacent (y:x:xs) = x - y : (diffAdjacent (x:xs))
+diffAdjacent (_:[])   = []
+diffAdjacent (y:x:xs) = x - y : diffAdjacent (x:xs)
 
-movingSum3 :: [Int] -> [Int]
-movingSum3 (_:_:[]) = []
-movingSum3 (a:b:c:xs) = a + b + c : (movingSum3 (b:c:xs))
+movingSum :: Int -> [Int] -> [Int]
+movingSum n (x:xs) = if length subList < n
+    then []
+    else sum subList : movingSum n xs
+    where subList = take n (x:xs)
