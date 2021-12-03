@@ -6,7 +6,7 @@ main = do
     print . (\(x, y) -> x * y) . foldl execInstr (0, 0) $ lines input
     print . (\(x, y, _) -> x * y) . foldl execInstr2 (0, 0, 0) $ lines input
 
-execInstr ::(Int, Int) -> String -> (Int, Int)
+execInstr :: (Int, Int) -> String -> (Int, Int)
 execInstr (x, y) instr = (x + xMovement, y + yMovement)
     where
         (xMovement, yMovement) = parseMovement instr
