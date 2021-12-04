@@ -2,6 +2,7 @@ module Main where
 import Data.List.Split
 import Data.List
 import Data.Ord
+import Control.Monad
 
 main :: IO ()
 main = do
@@ -60,13 +61,13 @@ markBoard :: BingoBoard -> Int -> BingoBoard
 markBoard board n = (map . map) (markNum n) board
 
 checkBoard :: BingoBoard -> Bool
-checkBoard board = (or rows) || (or cols)
+checkBoard board = or rows || or cols
     where rows = map and boolBoard
           cols = foldr1 (zipWith (&&)) boolBoard
           boolBoard = (map . map) checkNum board
 
 sumBoard :: BingoBoard -> Int
-sumBoard = sum . map sum . (map . map) numValue
+sumBoard = sum . map numValue . join
 
 takeUntilIncl :: (a -> Bool) -> [a] -> [a]
 takeUntilIncl _ [] = []
