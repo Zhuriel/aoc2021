@@ -1,25 +1,37 @@
+{-# LANGUAGE TupleSections #-}
+
 module Main where
 import Control.Monad
 import Control.Applicative
 import Data.Char(digitToInt)
+import Data.List
 
 main :: IO ()
 main = do
-    input <- readFile "test.txt"
+    input <- readFile "input.txt"
     let heightMap = map (map digitToInt) . lines $ input
     let minima = globalMinima heightMap
     print $ partA heightMap
-    print $ getBasins heightMap
+    print $ partB heightMap
 
 partA :: HeightMap -> Int
 partA hm = sum mv + length mv
     where mv = minimumValues hm
 
+partB :: HeightMap -> Int
+partB hm = case basinSizes hm of
+    Just l  -> product . take 3 . reverse . sort . map length $ l
+    Nothing -> error "list should not be empty"
+
+basinSizes :: HeightMap -> Maybe Basins
+basinSizes hm = fmap fst . find (null . snd) $ iterate growBasins initial
+    where initial         = (map (:[]) globalMinCoords, basinCoords)
+          globalMinCoords = getCoords . globalMinima $ hm
+          basinCoords     = getCoords . getBasins $ hm
+
 type HeightMap = [[Int]]
-data BasinMapStatus = NotBasin | Basin | Edge | Reduced | Complete
-    deriving (Show)
-type BasinMapTile = ((BasinMapStatus, BasinMapStatus), Int)
-type BasinMap = [[BasinMapTile]]
+type Basins = [Coords]
+type Coords = [(Int, Int)]
 
 minimumValues :: HeightMap -> [Int]
 minimumValues hm = map fst . filter snd $ zipped
@@ -30,6 +42,11 @@ globalMinima hm = zipWith (zipWith (&&)) rows cols
     where rows    = tail $ rowMinima preProc
           cols    = map tail $ colMinima preProc
           preProc = replicate ((+1) . length . head $ hm) 10 : map (10:) hm
+
+getCoords :: [[Bool]] -> Coords
+getCoords bs = map fst . filter snd . join $ zipped
+    where zipped = zipWith zip coords bs
+          coords = map (\y -> map (,y) [0..]) [0..]
 
 colMinima :: HeightMap -> [[Bool]]
 colMinima []            = []
@@ -49,27 +66,19 @@ rowMinimum (x1:x2:x3:xs) = (x2 < x1 && x2 < x3) : rowMinimum (x2:x3:xs)
 getBasins :: HeightMap -> [[Bool]]
 getBasins = map (map (<9))
 
-expandBasins :: HeightMap -> [[Bool]] -> [[Bool]]
-expandBasins hm bm | noChange  = bm
-                   | otherwise = expandBasins hm newBm
-    where newBm    = expandBasinsStep hm bm
-          noChange = and . map and . zipWith (zipWith (==)) bm $ newBm
+getAdjacents :: (Int, Int) -> Coords
+getAdjacents (x, y) = [(x-1, y), (x+1, y), (x, y-1), (x, y+1)]
 
-expandBasinsStep :: HeightMap -> [[Bool]] -> [[Bool]]
-expandBasinsStep hm bm = map (map snd) hStep
-    where hStep  = map expandPrim . map ((10, False):) $ transpose vStep
-          vStep  = map expandPrim . map ((10, False):) $ transpose zipped
-          zipped = zipWith zip hm bm
+growBasins :: (Basins, Coords) -> (Basins, Coords)
+growBasins ([], xs)   = ([], xs)
+growBasins (b:bs, xs) = (nb:rb, rx)
+    where (nb, nx) = growBasin b xs
+          (rb, rx) = growBasins (bs, nx)
 
-expandPrim :: [(Int, Bool)] -> [(Int, Bool)]
-expandPrim [] = []
-expandPrim [x] = error "should not encounter the case of a single element"
-expandPrim [(_, True), (x, _)]      = [(x, x < 9)]
-expandPrim [(_, False), x]          = [x]
-expandPrim ((_, True):(x, xb):x2:xs) = (x, x < 9) : expandPrim ((x,xb):x2:xs)
-expandPrim (_:(x, xb):(x2, True):xs) = (x, x < 9) : expandPrim ((x,xb):(x2, True):xs)
-expandPrim (_:x:x2:xs)              = x : expandPrim (x:x2:xs)
-
--- thanks random blog
-transpose :: [[a]] -> [[a]]
-transpose = getZipList . traverse ZipList
+growBasin :: Coords -> Coords -> (Coords, Coords)
+growBasin b []                  = (b, [])
+growBasin b (x:xs) | x `elem` b = (rb, rx)
+                   | adjacent   = (x:rb, rx)
+                   | otherwise  = (rb, x:rx)
+    where adjacent = any (`elem` b) $ getAdjacents x
+          (rb, rx) = growBasin b xs
