@@ -51,13 +51,14 @@ simStep =
           resetNothing x         = x
 
 incrementOctopus :: [(Int, Int)] -> OctoState ()
+incrementOctopus [] = return ()
 incrementOctopus (i:is) =
     do curState <- get
        let curVal   = curState ! i
        put $ curState // [(i, newVal curVal)]
        let newIncrements = constr curState $ newIncr curVal
-       let newList  = newIncrements ++ is
-       unless (null newList) $ incrementOctopus newList
+       incrementOctopus newIncrements
+       incrementOctopus is
     where newVal (Just n) | n < 9   = Just (n + 1)
           newVal _                  = Nothing
           offsets                   = (,) <$> [-1,0,1] <*> [-1,0,1]
@@ -80,5 +81,3 @@ parseInput s = array bounds (join $ zipWith zip coords lists)
           dimensions = (length lists - 1, (length . head $ lists) - 1)
           bounds     = ((0, 0), dimensions)
           coords     = map (\y -> map (,y) [0..]) [0..]
-
-trace2 x = trace (show x) x
