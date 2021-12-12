@@ -81,7 +81,7 @@ filterCand p = filter f
 
 
 hasRepeatingSmall :: CavePath -> Bool
-hasRepeatingSmall = not . null . filter f
+hasRepeatingSmall = any f
     where f (Repeated _) = True
           f _            = False
 
