@@ -1,5 +1,6 @@
 *.hi
 *.o
 */Main
+*/Alt
 */input.txt
 */test*.txt
